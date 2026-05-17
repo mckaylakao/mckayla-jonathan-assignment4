@@ -5,8 +5,6 @@ import sys
 import string
 sys.setrecursionlimit(10**6)
 
-class Tests(unittest.TestCase):
-  pass
 
 IntList : TypeAlias = Union['LLNode', None]
 @dataclass(frozen=True)
@@ -17,52 +15,199 @@ class LLNode:
 @dataclass
 class WordLines:
   key : str
-  to_mutate : IntList
+  lines : IntList
 
-WordLinesList : TypeAlias = Union[WordLines, None]
+WordLinesList : TypeAlias = Union['WordLinesNode', None]
+
+@dataclass
+class WordLinesNode:
+  val : WordLines
+  next : WordLinesList
 @dataclass
 class HashTable:
   arr : List[WordLines]
   count : int
 
-# Return the hash code of 's' 
-def hash_fn(s:str) -> int:
-  pass
 
+max_load_factor : float = 1.0
+bin_size : int = 128
+
+# Return the hash code of 's' - mckayla
+def hash_fn(s:str) -> int:
+  sum : int = 0
+  for char in s:
+    sum = sum * 31 + ord(char)
+  return sum
+    
 # Make a fresh hash table with the given number of bins 'size', contains no elements
 def make_hash(size:int) -> HashTable:
-  pass
+  pass 
 
-#Return the number of bins in 'ht'
+#Return the number of bins in 'ht' - mckayla
 def hash_size(ht:HashTable) -> int:
-  pass
+  return len(ht.arr)
 
-#Return the number of elements(key-value pairs) in 'ht'
+#Return the number of elements(key-value pairs) in 'ht' 
 def hash_count(ht:HashTable) -> int:
   pass
 
-# Return whether 'ht' contains a mapping for the given 'word'.
+# Return whether 'ht' contains a mapping for the given 'word'. - mckayla
 def has_key(ht: HashTable, word: str) -> bool:
-  pass
+  index : int = hash_fn(word) % hash_size(ht)
+  curr : WordLinesList = ht.arr[index]
+  while curr is not None:
+    if curr.val.key == word:
+      return True
+    curr = curr.next
+  return False
+
 # Return the line numbers associated with the key 'word' in 'ht'.
 # The returned list should not contain duplicates, but need not be sorted.
 def lookup(ht: HashTable, word: str) -> List[int]:
   pass
-# Record in 'ht' that 'word' has an occurrence on line 'line'.
+
+# Record in 'ht' that 'word' has an occurrence on line 'line'.- mckayla
 def add(ht: HashTable, word: str, line: int) -> None:
-  pass
+  index: int = hash_fn(word) % hash_size(ht)
+  curr : WordLinesList = ht.arr[index]
+
+  while curr is not None:
+    if curr.val.key == word:
+      lines : IntList = curr.val.lines
+      while lines is not None:
+        if lines.val == line:
+          return
+        lines = lines.next
+      curr.val.lines = LLNode(line, curr.val.lines)
+      return
+    curr = curr.next
+
+  ht.arr[index] = WordLinesNode(WordLines(word,LLNode(line, None)), ht.arr[index])
+  ht.count += 1
+  if ht.count >= hash_size(ht):
+    new_size : int = hash_size(ht) * 2
+    new_arr : List[WordLinesList] = [None] * new_size
+    for bucket in ht.arr:
+      curr2 : WordLinesList = bucket
+      while curr2 is not None:
+        new_index : int = hash_fn(curr2.val.key) % new_size
+        new_arr[new_index] = WordLinesNode(curr2.val, new_arr[new_index])
+        curr2 = curr2.next
+
+      ht.arr = new_arr
+
+  
+    
+    
+
 # Return the words that have mappings in 'ht'.
 # The returned list should not contain duplicates, but need not be sorted.
 def hash_keys(ht: HashTable) -> List[str]:
   pass
+
 # Given a hash table 'stop_words' containing stop words as keys, plus
 # a sequence of strings 'lines' representing the lines of a document,
-# return a hash table representing a concordance of that document.
+# return a hash table representing a concordance of that document. - mckayla
 def make_concordance(stop_words: HashTable, lines: List[str]) -> HashTable:
   pass
+ 
 # Given an input file path, a stop-words file path, and an output file path,
-# overwrite the indicated output file with a sorted concordance of the input file.
+# overwrite the indicated output file with a sorted concordance of the input file. 
 def full_concordance(in_file: str, stop_words_file: str, out_file: str) -> None:
   pass
+
+class Tests(unittest.TestCase):
+  def test_hash_fn(self):
+    self.assertEqual(hash_fn(""), 0)
+    self.assertEqual(hash_fn("a"), 97)
+    self.assertEqual(hash_fn("ab"), 3105)
+    self.assertNotEqual(hash_fn("ab"), hash_fn("ba"))
+    self.assertEqual(hash_fn("hello"), hash_fn("hello"))
+  def test_make_hash(self):
+    pass
+  def test_hash_size(self):
+    ht: HashTable = HashTable([None, None, None], 0)
+    self.assertEqual(hash_size(ht), 3)
+    ht2: HashTable = HashTable([None], 0)
+    self.assertEqual(hash_size(ht2), 1)
+    ht3: HashTable = HashTable([None] * 128, 0)
+    self.assertEqual(hash_size(ht3), 128)
+  def test_hash_count(self):
+    pass
+  def test_has_key(self):
+  
+    ht: HashTable = HashTable([None] * 128, 0)
+    self.assertEqual(has_key(ht, "hello"), False)
+
+    ht2: HashTable = HashTable([None] * 128, 0)
+    bin_index: int = hash_fn("hello") % 128
+    ht2.arr[bin_index] = WordLinesNode(WordLines("hello", None), None)
+    self.assertEqual(has_key(ht2, "hello"), True)
+
+    ht3: HashTable = HashTable([None] * 128, 0)
+    bin_index3: int = hash_fn("hello") % 128
+    ht3.arr[bin_index3] = WordLinesNode(WordLines("hello", None), None)
+    self.assertEqual(has_key(ht3, "world"), False)
+
+    ht4: HashTable = HashTable([None] * 128, 0)
+
+    ht4.arr[0] = WordLinesNode(WordLines("hello", None),
+             WordLinesNode(WordLines("world", None), None))
+    ht4.arr[hash_fn("hello") % 128] = WordLinesNode(WordLines("hello", None), None)
+    ht4.arr[hash_fn("world") % 128] = WordLinesNode(WordLines("world", None), None)
+    self.assertEqual(has_key(ht4, "hello"), True)
+    self.assertEqual(has_key(ht4, "world"), True)
+
+    ht5: HashTable = HashTable([None] * 128, 0)
+    bin_index5: int = hash_fn("hello") % 128
+    ht5.arr[bin_index5] = WordLinesNode(WordLines("hello", None), None)
+    self.assertEqual(has_key(ht5, "cat"), False)
+  def test_lookup(self):
+    pass
+  def test_add(self):
+    ht: HashTable = HashTable([None] * 128, 0)
+    add(ht, "hello", 1)
+    bin_index: int = hash_fn("hello") % 128
+    self.assertIsNotNone(ht.arr[bin_index])
+    self.assertEqual(ht.arr[bin_index].val.key, "hello")
+    self.assertEqual(ht.arr[bin_index].val.lines.val, 1)
+
+    # count increases after add
+    ht2: HashTable = HashTable([None] * 128, 0)
+    add(ht2, "hello", 1)
+    self.assertEqual(ht2.count, 1)
+
+    # adding same word again should not increase count
+    add(ht2, "hello", 2)
+    self.assertEqual(ht2.count, 1)
+
+    # adding different word should increase count
+    add(ht2, "world", 1)
+    self.assertEqual(ht2.count, 2)
+
+    # add same word same line twice — no duplicates in line list
+    ht3: HashTable = HashTable([None] * 128, 0)
+    add(ht3, "cat", 1)
+    add(ht3, "cat", 1)
+    bin_index3: int = hash_fn("cat") % 128
+    # line list should only have one node
+    self.assertIsNone(ht3.arr[bin_index3].val.lines.next)
+
+    # add same word different lines — both lines should be in list
+    ht4: HashTable = HashTable([None] * 128, 0)
+    add(ht4, "cat", 1)
+    add(ht4, "cat", 4)
+    bin_index4: int = hash_fn("cat") % 128
+    lines = ht4.arr[bin_index4].val.lines
+    line_vals = []
+    while lines is not None:
+        line_vals.append(lines.val)
+        lines = lines.next
+    self.assertIn(1, line_vals)
+    self.assertIn(4, line_vals)
+  def test_make_concordance(self):
+    pass
+  def test_full_concordance(self):
+    pass
 if(__name__ == '__main__'):
   unittest.main()
