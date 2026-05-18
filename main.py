@@ -25,9 +25,8 @@ class WordLinesNode:
   next : WordLinesList
 @dataclass
 class HashTable:
-  arr : List[WordLines]
+  arr : List[WordLinesList]
   count : int
-
 
 max_load_factor : float = 1.0
 bin_size : int = 128
@@ -41,7 +40,7 @@ def hash_fn(s:str) -> int:
     
 # Make a fresh hash table with the given number of bins 'size', contains no elements
 def make_hash(size:int) -> HashTable:
-  pass 
+  return HashTable([None]*size, 0)
 
 #Return the number of bins in 'ht' - mckayla
 def hash_size(ht:HashTable) -> int:
@@ -49,7 +48,7 @@ def hash_size(ht:HashTable) -> int:
 
 #Return the number of elements(key-value pairs) in 'ht' 
 def hash_count(ht:HashTable) -> int:
-  pass
+  return ht.count
 
 # Return whether 'ht' contains a mapping for the given 'word'. - mckayla
 def has_key(ht: HashTable, word: str) -> bool:
@@ -61,10 +60,22 @@ def has_key(ht: HashTable, word: str) -> bool:
     curr = curr.next
   return False
 
+# Returns 'WordLines' of 'word' inside 'ht'
+def search_wll(ht: HashTable, word: str, wll: WordLinesList) -> WordLines:
+  match wll:
+    case None:
+      raise KeyError('Word is not in table')
+    case WordLinesNode(v, n):
+      if v.key == word:
+        return v
+      else:
+        return search_wll(ht, word, n)
+
 # Return the line numbers associated with the key 'word' in 'ht'.
 # The returned list should not contain duplicates, but need not be sorted.
-def lookup(ht: HashTable, word: str) -> List[int]:
-  pass
+def lookup(ht: HashTable, word: str) -> IntList:
+  bin: int = hash_fn(word) % hash_size(ht)
+  return search_wll(ht, word, ht.arr[bin]).lines
 
 # Record in 'ht' that 'word' has an occurrence on line 'line'.- mckayla
 def add(ht: HashTable, word: str, line: int) -> None:
@@ -96,10 +107,6 @@ def add(ht: HashTable, word: str, line: int) -> None:
 
       ht.arr = new_arr
 
-  
-    
-    
-
 # Return the words that have mappings in 'ht'.
 # The returned list should not contain duplicates, but need not be sorted.
 def hash_keys(ht: HashTable) -> List[str]:
@@ -123,8 +130,13 @@ class Tests(unittest.TestCase):
     self.assertEqual(hash_fn("ab"), 3105)
     self.assertNotEqual(hash_fn("ab"), hash_fn("ba"))
     self.assertEqual(hash_fn("hello"), hash_fn("hello"))
+  
   def test_make_hash(self):
-    pass
+    ht_1: HashTable = HashTable([None], 0)
+    self.assertEqual(make_hash(1), ht_1)
+    ht_2: HashTable = HashTable([None, None, None, None], 0)
+    self.assertEqual(make_hash(4), ht_2)
+  
   def test_hash_size(self):
     ht: HashTable = HashTable([None, None, None], 0)
     self.assertEqual(hash_size(ht), 3)
@@ -132,10 +144,19 @@ class Tests(unittest.TestCase):
     self.assertEqual(hash_size(ht2), 1)
     ht3: HashTable = HashTable([None] * 128, 0)
     self.assertEqual(hash_size(ht3), 128)
-  def test_hash_count(self):
-    pass
-  def test_has_key(self):
   
+  def test_hash_count(self):
+    ht_1: HashTable = HashTable([None, None], 0)
+    self.assertEqual(hash_count(ht_1), 0)
+    l_wll: List[WordLinesList] = [None, 
+                                  WordLinesNode(
+                                    WordLines(
+                                      'a', LLNode(3, None)), 
+                                      None)]
+    ht_2: HashTable = HashTable(l_wll, 1)
+    self.assertEqual(hash_count(ht_2), 1)
+  
+  def test_has_key(self):
     ht: HashTable = HashTable([None] * 128, 0)
     self.assertEqual(has_key(ht, "hello"), False)
 
@@ -162,8 +183,17 @@ class Tests(unittest.TestCase):
     bin_index5: int = hash_fn("hello") % 128
     ht5.arr[bin_index5] = WordLinesNode(WordLines("hello", None), None)
     self.assertEqual(has_key(ht5, "cat"), False)
+  
   def test_lookup(self):
-    pass
+    l_wll_1: List[WordLinesList] = [None, None]
+    ht_1: HashTable = HashTable(l_wll_1, 0)
+    add(ht_1, 'hello', 5)
+    self.assertEqual(lookup(ht_1, 'hello'), LLNode(5, None))
+    add(ht_1, 'new', 6)
+    self.assertEqual(lookup(ht_1, 'new'), LLNode(6, None))
+    add(ht_1, 'hello', 7)
+    self.assertEqual(lookup(ht_1, 'hello'), LLNode(7, LLNode(5, None)))
+  
   def test_add(self):
     ht: HashTable = HashTable([None] * 128, 0)
     add(ht, "hello", 1)
@@ -205,8 +235,10 @@ class Tests(unittest.TestCase):
         lines = lines.next
     self.assertIn(1, line_vals)
     self.assertIn(4, line_vals)
+  
   def test_make_concordance(self):
     pass
+  
   def test_full_concordance(self):
     pass
 if(__name__ == '__main__'):
