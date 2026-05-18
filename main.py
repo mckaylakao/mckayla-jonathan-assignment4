@@ -109,8 +109,26 @@ def hash_keys(ht: HashTable) -> List[str]:
 # a sequence of strings 'lines' representing the lines of a document,
 # return a hash table representing a concordance of that document. - mckayla
 def make_concordance(stop_words: HashTable, lines: List[str]) -> HashTable:
-  pass
- 
+  ht : HashTable = make_hash(bin_size) 
+  line_index : int = 1
+  for line in lines:
+    line = line.replace("'", "")
+    for char in string.punctuation:
+      line = line.replace(char, " ")
+    line = line.lower()
+    tokens : List[str] = line.split()
+    words : List[str] = []
+    for token in tokens:
+      if token.isalpha():
+        words.append(token)
+    for word in words:
+      if not has_key(stop_words, word):
+        add(ht, word, line_index)
+    line_index +=1
+  return ht
+
+
+        
 # Given an input file path, a stop-words file path, and an output file path,
 # overwrite the indicated output file with a sorted concordance of the input file. 
 def full_concordance(in_file: str, stop_words_file: str, out_file: str) -> None:
@@ -205,8 +223,65 @@ class Tests(unittest.TestCase):
         lines = lines.next
     self.assertIn(1, line_vals)
     self.assertIn(4, line_vals)
-  def test_make_concordance(self):
-    pass
+  def test_make_concordance(self):    
+    # empty lines should return empty concordance
+    stop_words: HashTable = make_hash(128)
+    concordance: HashTable = make_concordance(stop_words, [])
+    self.assertEqual(hash_count(concordance), 0)
+
+    # basic test — word appears on correct line
+    stop_words2: HashTable = make_hash(128)
+    concordance2: HashTable = make_concordance(stop_words2, ["cat sat"])
+    self.assertTrue(has_key(concordance2, "cat"))
+    self.assertTrue(has_key(concordance2, "sat"))
+    self.assertIn(1, lookup(concordance2, "cat"))
+    self.assertIn(1, lookup(concordance2, "sat"))
+
+    # stop words should not appear in concordance
+    stop_words3: HashTable = make_hash(128)
+    add(stop_words3, "the", 0)
+    add(stop_words3, "a", 0)
+    concordance3: HashTable = make_concordance(stop_words3, ["the cat sat"])
+    self.assertFalse(has_key(concordance3, "the"))
+    self.assertFalse(has_key(concordance3, "a"))
+    self.assertTrue(has_key(concordance3, "cat"))
+
+    # word appears on multiple lines
+    stop_words4: HashTable = make_hash(128)
+    concordance4: HashTable = make_concordance(stop_words4, ["cat sat", "cat ran"])
+    self.assertIn(1, lookup(concordance4, "cat"))
+    self.assertIn(2, lookup(concordance4, "cat"))
+
+    # word appears on same line twice — no duplicates
+    stop_words5: HashTable = make_hash(128)
+    concordance5: HashTable = make_concordance(stop_words5, ["cat cat cat"])
+    line_nums: List[int] = lookup(concordance5, "cat")
+    self.assertEqual(line_nums.count(1), 1)
+
+    # punctuation should be removed
+    stop_words6: HashTable = make_hash(128)
+    concordance6: HashTable = make_concordance(stop_words6, ["cat, sat."])
+    self.assertTrue(has_key(concordance6, "cat"))
+    self.assertTrue(has_key(concordance6, "sat"))
+
+    # uppercase should be treated same as lowercase
+    stop_words7: HashTable = make_hash(128)
+    concordance7: HashTable = make_concordance(stop_words7, ["CAT sat"])
+    self.assertTrue(has_key(concordance7, "cat"))
+    self.assertIn(1, lookup(concordance7, "cat"))
+
+    # blank lines should still count toward line numbering
+    stop_words8: HashTable = make_hash(128)
+    concordance8: HashTable = make_concordance(stop_words8, ["cat", "", "dog"])
+    self.assertIn(1, lookup(concordance8, "cat"))
+    self.assertIn(3, lookup(concordance8, "dog"))
+
+    # non alphabetical tokens should be ignored
+    stop_words9: HashTable = make_hash(128)
+    concordance9: HashTable = make_concordance(stop_words9, ["gr8 cat 123"])
+    self.assertFalse(has_key(concordance9, "gr8"))
+    self.assertFalse(has_key(concordance9, "123"))
+    self.assertTrue(has_key(concordance9, "cat"))
   def test_full_concordance(self):
     pass
 if(__name__ == '__main__'):
