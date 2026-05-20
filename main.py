@@ -75,6 +75,9 @@ def search_wll(ht: HashTable, word: str, wll: WordLinesList) -> WordLines:
 # Return the line numbers associated with the key 'word' in 'ht'.
 # The returned list should not contain duplicates, but need not be sorted.
 def lookup(ht: HashTable, word: str) -> List[int]:
+  if not has_key(ht, word):
+    return []
+  
   bin: int = hash_fn(word) % hash_size(ht)
   return intlist_to_sortedlist(search_wll(ht, word, ht.arr[bin]).lines)
 
