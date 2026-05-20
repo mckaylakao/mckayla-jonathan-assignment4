@@ -23,6 +23,7 @@ WordLinesList : TypeAlias = Union['WordLinesNode', None]
 class WordLinesNode:
   val : WordLines
   next : WordLinesList
+  
 @dataclass
 class HashTable:
   arr : List[WordLinesList]
