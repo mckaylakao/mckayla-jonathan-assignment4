@@ -19,7 +19,7 @@ class WordLines:
 
 WordLinesList : TypeAlias = Union['WordLinesNode', None]
 
-@dataclass
+@dataclass(frozen=True)
 class WordLinesNode:
   val : WordLines
   next : WordLinesList
@@ -74,9 +74,9 @@ def search_wll(ht: HashTable, word: str, wll: WordLinesList) -> WordLines:
 
 # Return the line numbers associated with the key 'word' in 'ht'.
 # The returned list should not contain duplicates, but need not be sorted.
-def lookup(ht: HashTable, word: str) -> IntList:
+def lookup(ht: HashTable, word: str) -> List[int]:
   bin: int = hash_fn(word) % hash_size(ht)
-  return search_wll(ht, word, ht.arr[bin]).lines
+  return intlist_to_sortedlist(search_wll(ht, word, ht.arr[bin]).lines)
 
 # Record in 'ht' that 'word' has an occurrence on line 'line'.- mckayla
 def add(ht: HashTable, word: str, line: int) -> None:
@@ -106,7 +106,7 @@ def add(ht: HashTable, word: str, line: int) -> None:
         new_arr[new_index] = WordLinesNode(curr2.val, new_arr[new_index])
         curr2 = curr2.next
 
-      ht.arr = new_arr
+    ht.arr = new_arr
 
 # Return the words that have mappings in 'ht'.
 # The returned list should not contain duplicates, but need not be sorted.
@@ -148,6 +148,7 @@ def intlist_to_sortedlist(lines: IntList) -> List[int]:
   while curr is not None:
     nums.append(curr.val)
     curr = curr.next
+
   result: List[int] = []
   for num in sorted(nums):
     if num not in result:
@@ -173,7 +174,7 @@ def full_concordance(in_file: str, stop_words_file: str, out_file: str) -> None:
 
   with open(out_file, "w") as f:
     for word in words:
-      line_nums: List[int] = intlist_to_sortedlist(lookup(concordance, word))
+      line_nums: List[int] = lookup(concordance, word)
       line_nums.sort()
       nums_str: str = " ".join(str(num) for num in line_nums)
       f.write(word + ": " + nums_str + "\n")
@@ -243,11 +244,11 @@ class Tests(unittest.TestCase):
     l_wll_1: List[WordLinesList] = [None, None]
     ht_1: HashTable = HashTable(l_wll_1, 0)
     add(ht_1, 'hello', 5)
-    self.assertEqual(lookup(ht_1, 'hello'), LLNode(5, None))
+    self.assertEqual(lookup(ht_1, 'hello'), [5])
     add(ht_1, 'new', 6)
-    self.assertEqual(lookup(ht_1, 'new'), LLNode(6, None))
+    self.assertEqual(lookup(ht_1, 'new'), [6])
     add(ht_1, 'hello', 7)
-    self.assertEqual(lookup(ht_1, 'hello'), LLNode(7, LLNode(5, None)))
+    self.assertEqual(lookup(ht_1, 'hello'), [5, 7])
   
   def test_add(self):
     ht: HashTable = HashTable([None] * 128, 0)
@@ -315,8 +316,8 @@ class Tests(unittest.TestCase):
     concordance2: HashTable = make_concordance(stop_words2, ["cat sat"])
     self.assertTrue(has_key(concordance2, "cat"))
     self.assertTrue(has_key(concordance2, "sat"))
-    self.assertIn(1, intlist_to_sortedlist(lookup(concordance2, "cat")))
-    self.assertIn(1, intlist_to_sortedlist(lookup(concordance2, "sat")))
+    self.assertIn(1, lookup(concordance2, "cat"))
+    self.assertIn(1, lookup(concordance2, "sat"))
 
     # stop words should not appear in concordance
     stop_words3: HashTable = make_hash(128)
@@ -330,13 +331,13 @@ class Tests(unittest.TestCase):
     # word appears on multiple lines
     stop_words4: HashTable = make_hash(128)
     concordance4: HashTable = make_concordance(stop_words4, ["cat sat", "cat ran"])
-    self.assertIn(1, intlist_to_sortedlist(lookup(concordance4, "cat")))
-    self.assertIn(2, intlist_to_sortedlist(lookup(concordance4, "cat")))
+    self.assertIn(1, lookup(concordance4, "cat"))
+    self.assertIn(2, lookup(concordance4, "cat"))
 
     # word appears on same line twice — no duplicates
     stop_words5: HashTable = make_hash(128)
     concordance5: HashTable = make_concordance(stop_words5, ["cat cat cat"])
-    line_nums: List[int] = intlist_to_sortedlist(lookup(concordance5, "cat"))
+    line_nums: List[int] = lookup(concordance5, "cat")
     self.assertEqual(line_nums.count(1), 1)
 
     # punctuation should be removed
@@ -349,13 +350,13 @@ class Tests(unittest.TestCase):
     stop_words7: HashTable = make_hash(128)
     concordance7: HashTable = make_concordance(stop_words7, ["CAT sat"])
     self.assertTrue(has_key(concordance7, "cat"))
-    self.assertIn(1, intlist_to_sortedlist(lookup(concordance7, "cat")))
+    self.assertIn(1, lookup(concordance7, "cat"))
 
     # blank lines should still count toward line numbering
     stop_words8: HashTable = make_hash(128)
     concordance8: HashTable = make_concordance(stop_words8, ["cat", "", "dog"])
-    self.assertIn(1, intlist_to_sortedlist(lookup(concordance8, "cat")))
-    self.assertIn(3, intlist_to_sortedlist(lookup(concordance8, "dog")))
+    self.assertIn(1, lookup(concordance8, "cat"))
+    self.assertIn(3, lookup(concordance8, "dog"))
 
     # non alphabetical tokens should be ignored
     stop_words9: HashTable = make_hash(128)
