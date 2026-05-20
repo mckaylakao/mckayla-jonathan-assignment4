@@ -391,5 +391,8 @@ class Tests(unittest.TestCase):
       "sat: 1 4\n"
     ])
 
+    with open(out_file, "w") as f: # Make test_output empty, allows for retest
+      f.write('')
+
 if(__name__ == '__main__'):
   unittest.main()
