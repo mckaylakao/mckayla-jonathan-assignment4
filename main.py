@@ -141,12 +141,18 @@ def make_concordance(stop_words: HashTable, lines: List[str]) -> HashTable:
   return ht
 
 # Convert 'lines' to 'List[int]'
-def intlist_to_list(lines: IntList) -> List[int]:
+def intlist_to_sortedlist(lines: IntList) -> List[int]:
   nums: List[int] = []
   curr: IntList = lines
   while curr is not None:
     nums.append(curr.val)
     curr = curr.next
+  result: List[int] = []
+  for num in sorted(nums):
+    if num not in result:
+      result.append(num)
+  return result
+  
   return nums
 # Given an input file path, a stop-words file path, and an output file path,
 # overwrite the indicated output file with a sorted concordance of the input file. 
@@ -166,7 +172,7 @@ def full_concordance(in_file: str, stop_words_file: str, out_file: str) -> None:
 
   with open(out_file, "w") as f:
     for word in words:
-      line_nums: List[int] = intlist_to_list(lookup(concordance, word))
+      line_nums: List[int] = intlist_to_sortedlist(lookup(concordance, word))
       line_nums.sort()
       nums_str: str = " ".join(str(num) for num in line_nums)
       f.write(word + ": " + nums_str + "\n")
@@ -308,8 +314,8 @@ class Tests(unittest.TestCase):
     concordance2: HashTable = make_concordance(stop_words2, ["cat sat"])
     self.assertTrue(has_key(concordance2, "cat"))
     self.assertTrue(has_key(concordance2, "sat"))
-    self.assertIn(1, intlist_to_list(lookup(concordance2, "cat")))
-    self.assertIn(1, intlist_to_list(lookup(concordance2, "sat")))
+    self.assertIn(1, intlist_to_sortedlist(lookup(concordance2, "cat")))
+    self.assertIn(1, intlist_to_sortedlist(lookup(concordance2, "sat")))
 
     # stop words should not appear in concordance
     stop_words3: HashTable = make_hash(128)
@@ -323,13 +329,13 @@ class Tests(unittest.TestCase):
     # word appears on multiple lines
     stop_words4: HashTable = make_hash(128)
     concordance4: HashTable = make_concordance(stop_words4, ["cat sat", "cat ran"])
-    self.assertIn(1, intlist_to_list(lookup(concordance4, "cat")))
-    self.assertIn(2, intlist_to_list(lookup(concordance4, "cat")))
+    self.assertIn(1, intlist_to_sortedlist(lookup(concordance4, "cat")))
+    self.assertIn(2, intlist_to_sortedlist(lookup(concordance4, "cat")))
 
     # word appears on same line twice — no duplicates
     stop_words5: HashTable = make_hash(128)
     concordance5: HashTable = make_concordance(stop_words5, ["cat cat cat"])
-    line_nums: List[int] = intlist_to_list(lookup(concordance5, "cat"))
+    line_nums: List[int] = intlist_to_sortedlist(lookup(concordance5, "cat"))
     self.assertEqual(line_nums.count(1), 1)
 
     # punctuation should be removed
@@ -342,13 +348,13 @@ class Tests(unittest.TestCase):
     stop_words7: HashTable = make_hash(128)
     concordance7: HashTable = make_concordance(stop_words7, ["CAT sat"])
     self.assertTrue(has_key(concordance7, "cat"))
-    self.assertIn(1, intlist_to_list(lookup(concordance7, "cat")))
+    self.assertIn(1, intlist_to_sortedlist(lookup(concordance7, "cat")))
 
     # blank lines should still count toward line numbering
     stop_words8: HashTable = make_hash(128)
     concordance8: HashTable = make_concordance(stop_words8, ["cat", "", "dog"])
-    self.assertIn(1, intlist_to_list(lookup(concordance8, "cat")))
-    self.assertIn(3, intlist_to_list(lookup(concordance8, "dog")))
+    self.assertIn(1, intlist_to_sortedlist(lookup(concordance8, "cat")))
+    self.assertIn(3, intlist_to_sortedlist(lookup(concordance8, "dog")))
 
     # non alphabetical tokens should be ignored
     stop_words9: HashTable = make_hash(128)
@@ -357,11 +363,11 @@ class Tests(unittest.TestCase):
     self.assertFalse(has_key(concordance9, "123"))
     self.assertTrue(has_key(concordance9, "cat"))
 
-  def test_intlist_to_list(self):
-    self.assertEqual(intlist_to_list(None), [])
+  def test_intlist_to_sortedlist(self):
+    self.assertEqual(intlist_to_sortedlist(None), [])
 
     ll: IntList = LLNode(3, LLNode(1, LLNode(2, None)))
-    self.assertEqual(intlist_to_list(ll), [3, 1, 2])
+    self.assertEqual(intlist_to_sortedlist(ll), [1, 2, 3])
 
   def test_full_concordance(self):
     in_file: str = "test_input.txt"
