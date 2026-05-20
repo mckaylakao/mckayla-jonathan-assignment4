@@ -10,6 +10,8 @@ her
 hers
 she
 he
+this
+was
 him
 his
 their
@@ -18,7 +20,17 @@ theirs
 yet
 the
 a
+on 
+in 
+this
+that
 an
 is
 be
+by
 of
+as
+you
+at
+me
+i
